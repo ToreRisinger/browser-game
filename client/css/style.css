@@ -12,12 +12,28 @@ canvas {
 .container {
     position: relative;
 }
-#overlay {
+#coord_display {
     position: absolute;
     left: 10px;
-    top: 10px;
-    background-color: rgba(0, 0, 0, 0.7);
+    bottom: 10px;
+    background-color: rgba(180, 180, 256, 0.2);
     color: white;
     font-family: monospace;
     padding: 1em;
+}
+#ship_builder_button {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    background-image: url("../img/ship_builder_button.png");
+    background-color: rgba(256, 256, 256, 1);
+    color: white;
+    font-family: monospace;
+    padding: 1em;
+    height: 20px;
+    width: 20px;
+    opacity: 0.8;
+}
+#ship_builder_button:hover {
+    opacity: 1;
 }

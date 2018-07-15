@@ -73,8 +73,8 @@ var Gui = function() {
 	}
 	
 	self.createGui = function() {
-		var xElement = document.getElementById("overlay_player_x");
-		var yElement = document.getElementById("overlay_player_y");
+		var xElement = document.getElementById("coord_display_x");
+		var yElement = document.getElementById("coord_display_y");
 
 		var xNode = document.createTextNode("");
 		var yNode = document.createTextNode("");
@@ -82,17 +82,19 @@ var Gui = function() {
 		xElement.appendChild(xNode);
 		yElement.appendChild(yNode);
 
-		self.overlay_player_x = xNode;
-		self.overlay_player_y = yNode;
+		self.coord_display_x = xNode;
+		self.coord_display_y = yNode;
+		self.ship_builder_button = document.getElementById("ship_builder_button");
 	}
 
-	self.updateGui = function() {
-		self.overlay_player_x.nodeValue = thisPlayer.position.x;
-		self.overlay_player_y.nodeValue = thisPlayer.position.y;
+	self.update = function() {
+		self.coord_display_x.nodeValue = Math.floor(thisPlayer.position.x);
+		self.coord_display_y.nodeValue = Math.floor(thisPlayer.position.y);
 	}
 
 	self.addActionListeners = function() {
 		canvas.addEventListener("click", self.onMoveAction, false);
+		ship_builder_button.addEventListener("click", self.onOpenShipBuilderAction, false);
 	}
 
 	//Actions
@@ -100,6 +102,10 @@ var Gui = function() {
 		var x = (event.pageX - canvas.width / 2) + camera.x;
 		var y = ((event.pageY - canvas.height / 2) * -1) + camera.y;
 		server.sendPlayerAction("shipMoveRequest", {id: thisPlayerId, x: x, y: y});
+	}
+
+	self.onOpenShipBuilderAction = function(event) {
+		
 	}
 
 	return self;
@@ -197,7 +203,7 @@ var Graphics = function(canvas) {
 		}
 	}
 
-	self.drawScene = function() {
+	self.render = function() {
 		var gl = self.gl;
 		self.resize(gl.canvas);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -231,7 +237,7 @@ var Graphics = function(canvas) {
 
 		//Draw destination
 		if(thisPlayer.isMoving) {
-			self.drawObject(thisPlayer.destPosition.x, 
+			self.renderObject(thisPlayer.destPosition.x, 
 				thisPlayer.destPosition.y,
 				{x:5, y:5}, 
 				{x:0, y:1, z:0},
@@ -239,7 +245,7 @@ var Graphics = function(canvas) {
 		}
 
 	    //Draw this player
-	    self.drawObject(thisPlayer.position.x, 
+	    self.renderObject(thisPlayer.position.x, 
 				thisPlayer.position.y,
 				{x:10, y:10}, 
 				{x:1, y:0, z:0},
@@ -247,7 +253,7 @@ var Graphics = function(canvas) {
 
 	    for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
-	    	self.drawObject(player.position.x, 
+	    	self.renderObject(player.position.x, 
 				player.position.y,
 				{x:10, y:10}, 
 				{x:1, y:0, z:0},
@@ -255,7 +261,7 @@ var Graphics = function(canvas) {
 		}
 	}
 
-	self.drawObject = function(x, y, scaling, color) {
+	self.renderObject = function(x, y, scaling, color) {
 		var gl = self.gl;
 		var translationMatrix = self.translation(x - camera.x + graphics.gl.canvas.width / 2, 
 			y - camera.y + graphics.gl.canvas.height / 2);
@@ -354,8 +360,8 @@ function main() {
 	gui.createGui();
 	gui.addActionListeners();
 
-	setInterval(graphics.drawScene, 1000/25);
-	setInterval(gui.updateGui, 1000/25);
+	setInterval(graphics.render, 1000/25);
+	setInterval(gui.update, 1000/25);
 }
 
 main();
