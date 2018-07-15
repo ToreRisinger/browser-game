@@ -1,3 +1,1 @@
 # browser-game
-
-Test
