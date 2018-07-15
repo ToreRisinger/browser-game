@@ -69,7 +69,7 @@ var Camera = function() {
 //Gui class
 var Gui = function() {
 	var self = {
-
+		display_ship_builder: false,
 	}
 	
 	self.createGui = function() {
@@ -94,7 +94,7 @@ var Gui = function() {
 
 	self.addActionListeners = function() {
 		canvas.addEventListener("click", self.onMoveAction, false);
-		ship_builder_button.addEventListener("click", self.onOpenShipBuilderAction, false);
+		ship_builder_button.addEventListener("click", self.onPressShipBuilderAction, false);
 	}
 
 	//Actions
@@ -104,7 +104,14 @@ var Gui = function() {
 		server.sendPlayerAction("shipMoveRequest", {id: thisPlayerId, x: x, y: y});
 	}
 
-	self.onOpenShipBuilderAction = function(event) {
+	self.onPressShipBuilderAction = function(event) {
+		if(self.display_ship_builder) {
+			ship_builder_button.style.border = "thin solid #000000";
+			self.display_ship_builder = false;
+		} else {
+			ship_builder_button.style.border = "thin solid #00FF00";
+			self.display_ship_builder = true;
+		}
 		
 	}
 
@@ -338,6 +345,15 @@ var Graphics = function(canvas) {
   	return self;
 }
 
+//Game class
+var Game = function() {
+	self = {
+
+	}
+
+	return self;
+}
+
 
 //Global variables
 var canvas = document.getElementById("canvas");
@@ -346,6 +362,7 @@ var server = Server();
 var camera = Camera();
 var gui = Gui();
 var graphics = Graphics(canvas);
+var game = Game();
 
 var PLAYER_LIST = {};
 var thisPlayer = Player(-1);

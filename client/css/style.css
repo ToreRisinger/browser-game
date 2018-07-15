@@ -33,6 +33,7 @@ canvas {
     height: 20px;
     width: 20px;
     opacity: 0.8;
+    border: thin solid #000000;
 }
 #ship_builder_button:hover {
     opacity: 1;
