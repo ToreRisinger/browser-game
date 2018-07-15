@@ -1,0 +1,49 @@
+<head>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<div class="container">
+  <canvas id="canvas"></canvas>
+  <div id="overlay">
+    <div>X: <span id="overlay_player_x"></span></div>
+    <div>Y: <span id="overlay_player_y"></span></div>
+  </div>
+</div>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script id="2d-vertex-shader" type="notjs">	
+
+	attribute vec2 a_vertex;
+
+	uniform vec2 u_resolution;
+
+	uniform mat3 u_translation;
+	uniform mat3 u_scaling;
+	uniform mat3 u_rotation;
+
+	void main() {
+		vec2 position = (u_translation * u_rotation * u_scaling * vec3(a_vertex, 1)).xy;
+
+		//convert the position from pixels to 0.0 to 1.0
+		vec2 zeroToOne = position / u_resolution;
+
+		//convert from 0->1 to 0->2
+		vec2 zeroToTwo = zeroToOne * 2.0;
+
+		//convert from 0->2 to -1->+1 (clipspace)
+		vec2 clipSpace = zeroToTwo - 1.0;
+
+		gl_Position = vec4(clipSpace, 0, 1);
+	}
+
+</script>
+
+<script id="2d-fragment-shader" type="notjs">	
+	
+	precision mediump float;
+
+	uniform vec3 u_color;
+
+	void main() {
+		gl_FragColor = vec4(u_color, 1);
+	}
+</script>
+<script src="js/client.js"></script>
