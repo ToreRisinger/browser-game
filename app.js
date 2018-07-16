@@ -6,8 +6,26 @@ var Player = function(id, socket) {
 		id: id,
 		isMoving: false,
 		destPosition: {x: 0, y: 0},
+		speed: 1,
 		socket: socket,
 	}
+
+	self.update = function() {
+		if(self.isMoving) {
+			var diffX = self.destPosition.x - self.position.x;
+			var diffY = self.destPosition.y - self.position.y;
+			var distance = Math.sqrt(diffX * diffX + diffY * diffY);
+			if(distance <= self.speed) {
+				self.position.x = self.destPosition.x;
+				self.position.y = self.destPosition.y;
+				self.isMoving = false;
+			} else {
+				self.position.x += (diffX / distance) * self.speed;
+				self.position.y += (diffY / distance) * self.speed;
+			}
+		}
+	}
+
 	Player.list[id] = self;
 	return self;
 }
@@ -36,7 +54,7 @@ function main() {
 
 	/* INTERVAL FUNCTIONS */
 	setInterval(clientCommunication, 1000/25);
-	setInterval(logic, 1000/25);
+	setInterval(update, 1000/25);
 }
 
 function clientCommunication() {
@@ -58,23 +76,9 @@ function clientCommunication() {
 	}
 }
 
-function logic() {
+function update() {
 	for(var i in Player.list) {
-		var player = Player.list[i];
-		if(player.isMoving) {
-			var diffX = player.destPosition.x - player.position.x;
-			var diffY = player.destPosition.y - player.position.y;
-
-			var length = Math.sqrt(diffX * diffX + diffY * diffY);
-			if(length <= 1) {
-				player.position.x = player.destPosition.x;
-				player.position.y = player.destPosition.y;
-				player.isMoving = false;
-			} else {
-				player.position.x += diffX / length;
-				player.position.y += diffY / length;
-			}
-		}
+		Player.list[i].update();
 	}
 }
 

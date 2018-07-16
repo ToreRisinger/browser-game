@@ -195,24 +195,26 @@ var Graphics = function(canvas) {
 		return program;
 	}
 
-	self.resize = function() {
+	self.resize = function(gl) {
 		// Lookup the size the browser is displaying the canvas.
-		var displayWidth  = canvas.clientWidth;
-		var displayHeight = canvas.clientHeight;
+		var displayWidth  = gl.canvas.clientWidth;
+		var displayHeight = gl.canvas.clientHeight;
 
 		// Check if the canvas is not the same size.
-		if (canvas.width  != displayWidth ||
-		  canvas.height != displayHeight) {
+		if (gl.canvas.width  != displayWidth ||
+		  gl.canvas.height != displayHeight) {
 
-		// Make the canvas the same size
-		canvas.width  = displayWidth;
-		canvas.height = displayHeight;
+			// Make the canvas the same size
+			gl.canvas.width  = displayWidth;
+			gl.canvas.height = displayHeight;
 		}
 	}
 
 	self.render = function() {
+
+		//TODO draw lines, use gl.LINES mode instead of TRIANGLE
 		var gl = self.gl;
-		self.resize(gl.canvas);
+		self.resize(gl);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		gl.clearColor(0, 0, 0, 1);
 		gl.clear(gl.COLOR_BUFFER_BIT);
@@ -230,10 +232,6 @@ var Graphics = function(canvas) {
 	    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
 	    var offset = 0;        // start at the beginning of the buffer
 	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, size, type, normalize, stride, offset);
-
-	    var primitiveType = gl.TRIANGLES;
-	    var offset = 0;
-	    var count = 6;
 
 	    if(camera.followPlayer) {
 	    	camera.x = thisPlayer.position.x;
