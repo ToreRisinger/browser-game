@@ -125,7 +125,7 @@ var Graphics = function(canvas) {
 	}
 
 	self.init = function() {
-		self.gl = canvas.getContext("webgl");
+		self.gl = canvas.getContext("webgl", { antialias: true });
 		var gl = self.gl;
 
 		var vertexShaderSource = document.getElementById("2d-vertex-shader").text;
@@ -143,11 +143,10 @@ var Graphics = function(canvas) {
 		var rotationUniformLocation = gl.getUniformLocation(program, "u_rotation");
 		var colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
-		var positionBuffer = gl.createBuffer();
+		var square_gl_buffer = gl.createBuffer();
+		var line_gl_buffer = gl.createBuffer();
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-		var vertices = [
+		var square_vertices = [
 			0.5, -0.5,
 			0.5, 0.5,
 			-0.5, 0.5,
@@ -156,7 +155,15 @@ var Graphics = function(canvas) {
 			-0.5, -0.5,
 		];
 
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+		var line_vertices = [
+			0.0, 1.0,
+		];
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, square_gl_buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(square_vertices), gl.STATIC_DRAW);
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, line_gl_buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line_vertices), gl.DYNAMIC_DRAW);
 
 		self.program = program;
 		self.vertexAttributeLocation = vertexAttributeLocation;
@@ -165,7 +172,8 @@ var Graphics = function(canvas) {
 		self.scalingUniformLocation = scalingUniformLocation;
 		self.rotationUniformLocation = rotationUniformLocation;
 		self.colorUniformLocation = colorUniformLocation;
-		self.positionBuffer = positionBuffer;
+		self.square_gl_buffer = square_gl_buffer;
+		self.line_gl_buffer = line_gl_buffer;
 	}
 
 	self.createShader = function(gl, type, source) {
@@ -211,63 +219,74 @@ var Graphics = function(canvas) {
 	}
 
 	self.render = function() {
+		//Update camera position
+		if(camera.followPlayer) {
+	    	camera.x = thisPlayer.position.x;
+	    	camera.y = thisPlayer.position.y;
+	    }
 
-		//TODO draw lines, use gl.LINES mode instead of TRIANGLE
 		var gl = self.gl;
 		self.resize(gl);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		gl.clearColor(0, 0, 0, 1);
 		gl.clear(gl.COLOR_BUFFER_BIT);
-		gl.useProgram(graphics.program);
+		gl.useProgram(self.program);
 
-		gl.enableVertexAttribArray(graphics.vertexAttributeLocation);
 
-		// Bind the position buffer.
-	    gl.bindBuffer(gl.ARRAY_BUFFER, graphics.positionBuffer);
-	     
-	    // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-	    var size = 2;          // 2 components per iteration
-	    var type = gl.FLOAT;   // the data is 32bit floats
-	    var normalize = false; // don't normalize the data
-	    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-	    var offset = 0;        // start at the beginning of the buffer
-	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, size, type, normalize, stride, offset);
+		gl.enableVertexAttribArray(self.vertexAttributeLocation);
+		gl.uniform2f(self.resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 
-	    if(camera.followPlayer) {
-	    	camera.x = thisPlayer.position.x;
-	    	camera.y = thisPlayer.position.y;
-	    }
+		self.renderDestination();
+		self.renderAllShips();
+	}
 
-		gl.uniform2f(graphics.resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-
-		//Draw destination
-		if(thisPlayer.isMoving) {
-			self.renderObject(thisPlayer.destPosition.x, 
-				thisPlayer.destPosition.y,
-				{x:5, y:5}, 
-				{x:0, y:1, z:0},
-			);
-		}
-
-	    //Draw this player
-	    self.renderObject(thisPlayer.position.x, 
-				thisPlayer.position.y,
-				{x:10, y:10}, 
-				{x:1, y:0, z:0},
-			);
+	self.renderAllShips = function() {
+		var gl = self.gl;
+		
+	    self.renderShip(
+    		thisPlayer.position.x, 
+			thisPlayer.position.y,
+			{x:10, y:10}, 
+			{r:1, g:0, b:0},
+		);
 
 	    for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
-	    	self.renderObject(player.position.x, 
+	    	self.renderShip(
+	    		player.position.x, 
 				player.position.y,
 				{x:10, y:10}, 
-				{x:1, y:0, z:0},
-				);
+				{r:1, g:0, b:0},
+			);
 		}
 	}
 
-	self.renderObject = function(x, y, scaling, color) {
+	self.renderDestination = function() {
 		var gl = self.gl;
+
+		//Draw destination
+		if(thisPlayer.isMoving) {
+			//Render line
+			self.renderLine(
+				{x: thisPlayer.position.x, y: thisPlayer.position.y},
+				{x: thisPlayer.destPosition.x, y: thisPlayer.destPosition.y},
+				{r:0, g:0.3, b:0}
+			);
+			
+			self.renderSquare(thisPlayer.destPosition.x, 
+				thisPlayer.destPosition.y,
+				{x:5, y:5}, 
+				{r:0, g:1, b:0},
+			);
+		}
+	}
+
+	self.renderShip = function(x, y, scaling, color) {
+		var gl = self.gl;
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, graphics.square_gl_buffer);
+	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
 		var translationMatrix = self.translation(x - camera.x + graphics.gl.canvas.width / 2, 
 			y - camera.y + graphics.gl.canvas.height / 2);
 
@@ -277,9 +296,55 @@ var Graphics = function(canvas) {
 		gl.uniformMatrix3fv(graphics.translationUniformLocation, false, translationMatrix);
 		gl.uniformMatrix3fv(graphics.rotationUniformLocation, false, rotationMatrix);
 		gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
-		gl.uniform3f(graphics.colorUniformLocation, color.x, color.y, color.z);
+		gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
 
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
+	}
+
+	self.renderSquare = function(x, y, scaling, color) {
+		var gl = self.gl;
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, graphics.square_gl_buffer);
+	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+		var translationMatrix = self.translation(x - camera.x + graphics.gl.canvas.width / 2, 
+			y - camera.y + graphics.gl.canvas.height / 2);
+
+		var rotationMatrix = self.rotation(0);
+		var scalingMatrix = self.scaling(scaling.x, scaling.y)
+
+		gl.uniformMatrix3fv(graphics.translationUniformLocation, false, translationMatrix);
+		gl.uniformMatrix3fv(graphics.rotationUniformLocation, false, rotationMatrix);
+		gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
+		gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
+
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
+	}
+
+	self.renderLine = function(startPos, endPos, color) {
+		var gl = self.gl;
+
+		var line_vertices = [
+			startPos.x, startPos.y,
+			endPos.x, endPos.y,
+		];
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, self.line_gl_buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line_vertices), gl.DYNAMIC_DRAW);
+    	gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+		var translationMatrix = self.translation((graphics.gl.canvas.width / 2) - camera.x, 
+			(graphics.gl.canvas.height / 2) - camera.y);
+
+		var rotationMatrix = self.rotation(0);
+		var scalingMatrix = self.scaling(1, 1)
+
+		gl.uniformMatrix3fv(graphics.translationUniformLocation, false, translationMatrix);
+		gl.uniformMatrix3fv(graphics.rotationUniformLocation, false, rotationMatrix);
+		gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
+		gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
+
+		gl.drawArrays(gl.LINES, 0, 2);
 	}
 
 	self.translation = function(tx, ty) {
