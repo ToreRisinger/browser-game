@@ -109,11 +109,13 @@ var Gui = function() {
 		self.coord_display_x = xNode;
 		self.coord_display_y = yNode;
 		self.ship_builder_button = document.getElementById("ship_builder_button");
+		self.ship_statistics_button = document.getElementById("ship_statistics_button");
 	}
 
 	self.addActionListeners = function() {
 		canvas.addEventListener("click", self.onMoveAction, false);
 		ship_builder_button.addEventListener("click", self.onPressShipBuilderAction, false);
+		ship_statistics_button.addEventListener("click", self.onPressShipStatisticsAction, false);
 	}
 
 	self.update = function() {
@@ -136,7 +138,10 @@ var Gui = function() {
 			ship_builder_button.style.border = "thin solid #00FF00";
 			self.display_ship_builder = true;
 		}
-		
+	}
+
+	self.onPressShipStatisticsAction = function(event) {
+		//TODO
 	}
 
 	return self;

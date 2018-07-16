@@ -38,3 +38,20 @@ canvas {
 #ship_builder_button:hover {
     opacity: 1;
 }
+#ship_statistics_button {
+    position: absolute;
+    left: 10px;
+    top: 60px;
+    background-image: url("../img/ship_statistics_button.png");
+    background-color: rgba(256, 256, 256, 1);
+    color: white;
+    font-family: monospace;
+    padding: 1em;
+    height: 20px;
+    width: 20px;
+    opacity: 0.8;
+    border: thin solid #000000;
+}
+#ship_statistics_button:hover {
+    opacity: 1;
+}
