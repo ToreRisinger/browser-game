@@ -1,35 +1,61 @@
 
-//Classes
+//Ship class
+//Ship class
+var Ship = function() {
+	var self = {
+		pos: {x: 0, y: 0},
+		destPos: {x: 0, y: 0},
+		isMoving: false,
+		speed: 1,
+	}
+
+	self.toString = function() {
+		return {
+			pos: {x: self.pos.x, y: self.pos.y},
+			destPos: {x: self.destPos.x, y: self.destPos.y},
+			isMoving: self.isMoving,
+			speed: self.speed,
+		};
+	}
+
+	return self;
+}
+
+PLAYER_LIST = {};
+
+//Player class
 var Player = function(id, socket) {
 	var self = {
-		position: {x: 0, y: 0},
 		id: id,
-		isMoving: false,
-		destPosition: {x: 0, y: 0},
-		speed: 1,
 		socket: socket,
 	}
 
+	self.ship = Ship();
+
 	self.update = function() {
-		if(self.isMoving) {
-			var diffX = self.destPosition.x - self.position.x;
-			var diffY = self.destPosition.y - self.position.y;
+		if(self.ship.isMoving) {
+			var diffX = self.ship.destPos.x - self.ship.pos.x;
+			var diffY = self.ship.destPos.y - self.ship.pos.y;
 			var distance = Math.sqrt(diffX * diffX + diffY * diffY);
 			if(distance <= self.speed) {
-				self.position.x = self.destPosition.x;
-				self.position.y = self.destPosition.y;
-				self.isMoving = false;
+				self.ship.pos.x = self.ship.destPos.x;
+				self.ship.pos.y = self.ship.destPos.y;
+				self.ship.isMoving = false;
 			} else {
-				self.position.x += (diffX / distance) * self.speed;
-				self.position.y += (diffY / distance) * self.speed;
+				self.ship.pos.x += (diffX / distance) * self.ship.speed;
+				self.ship.pos.y += (diffY / distance) * self.ship.speed;
 			}
 		}
 	}
 
-	Player.list[id] = self;
+	self.toString = function() {
+		return {id: self.id, ship: self.ship.toString()};
+	}
+
+	PLAYER_LIST[id] = self;
 	return self;
 }
-Player.list = {};
+
 
 function main() {
 	/* Setup express and file communication */
@@ -60,25 +86,20 @@ function main() {
 function clientCommunication() {
 	var posPackage = [];
 
-	for(var i in Player.list) {
-		var player = Player.list[i];
-		posPackage.push({id: player.id, 
-			x: player.position.x, 
-			y: player.position.y, 
-			isMoving: player.isMoving,
-			destX: player.destPosition.x,
-			destY: player.destPosition.y});
+	for(var i in PLAYER_LIST) {
+		var player = PLAYER_LIST[i];
+		posPackage.push(player.toString());
 	}
 
-	for(var i in Player.list) {
-		var socket = Player.list[i].socket;
+	for(var i in PLAYER_LIST) {
+		var socket = PLAYER_LIST[i].socket;
 		socket.emit('playerPositions', posPackage);
 	}
 }
 
 function update() {
-	for(var i in Player.list) {
-		Player.list[i].update();
+	for(var i in PLAYER_LIST) {
+		PLAYER_LIST[i].update();
 	}
 }
 
@@ -94,12 +115,12 @@ function OnPlayerConnect(socket) {
 	});
 
 	socket.on('shipMoveRequest', function(data) {
-		var player = Player.list[data.id];
+		var player = PLAYER_LIST[data.id];
 		if(player) {
-			if(data.x != player.position.x || data.y != player.position.y) {
-				player.isMoving = true;
-				player.destPosition.x = data.x;
-				player.destPosition.y = data.y;
+			if(data.x != player.ship.pos.x || data.y != player.ship.pos.y) {
+				player.ship.isMoving = true;
+				player.ship.destPos.x = data.x;
+				player.ship.destPos.y = data.y;
 			}
 		}
 	});
@@ -107,7 +128,7 @@ function OnPlayerConnect(socket) {
 
 function OnPlayerDisconnect(player) {
 	console.log("Player disconnect");
-	delete Player.list[player.id];
+	delete PLAYER_LIST[player.id];
 }
 
 main();

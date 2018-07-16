@@ -1,12 +1,35 @@
 
+//Ship class
+var Ship = function() {
+	var self = {
+		pos: {x: 0, y: 0},
+		destPos: {x: 0, y: 0},
+		isMoving: false,
+		speed: 0,
+	}
+
+	self.updateState = function(data) {
+		self.pos = data.pos;
+		self.destPos = data.destPos;
+		self.isMoving = data.isMoving;
+		self.speed = data.speed;
+	}
+
+	return self;
+}
+
 //Player class
 var Player = function(id) {
 	var self = {
-		position: {x: 0, y: 0},
 		id: id,
-		isMoving: false,
-		destPosition: {x: 0, y: 0},
 	}
+
+	self.ship = Ship();
+
+	self.updateState = function(data) {
+		self.ship.updateState(data.ship);
+	}
+
 	return self;
 }
 
@@ -19,7 +42,7 @@ var Server = function() {
 
 	self.connect = function() {
 		self.socket.on('playerId', function(data) {
-			thisPlayerId = data.id;
+			thisPlayer = Player(data.id);
 			self.startListen();
 		});
 	}
@@ -28,21 +51,13 @@ var Server = function() {
 		self.socket.on('playerPositions', function(data) {
 			for(var i = 0; i < data.length; i++) {
 				var playerId = data[i].id;
-				if(playerId == thisPlayerId) {
-					thisPlayer = Player(playerId);
-					thisPlayer.position.x = data[i].x;
-					thisPlayer.position.y = data[i].y;
-					thisPlayer.isMoving = data[i].isMoving;
-					thisPlayer.destPosition.x = data[i].destX;
-					thisPlayer.destPosition.y = data[i].destY;
+				if(playerId == thisPlayer.id) {
+					thisPlayer.updateState(data[i]);
 				} else {
+					//TODO fix so we dont remove all players
 					PLAYER_LIST = {};
 					var player = Player(playerId);
-					player.position.x = data[i].x;
-					player.position.y = data[i].y;
-					player.isMoving = data[i].isMoving;
-					player.destPosition.x = data[i].destX;
-					player.destPosition.y = data[i].destY;
+					player.updateState(data[i]);
 					PLAYER_LIST[player.id] = player;
 				}
 			}
@@ -63,6 +78,15 @@ var Camera = function() {
 		x: 0,
 		y: 0,
 	}
+
+	self.update = function() {
+		//Update camera position
+		if(camera.followPlayer) {
+	    	self.x = thisPlayer.ship.pos.x;
+	    	self.y = thisPlayer.ship.pos.y;
+	    }
+	}
+
 	return self;
 }
 
@@ -87,21 +111,21 @@ var Gui = function() {
 		self.ship_builder_button = document.getElementById("ship_builder_button");
 	}
 
-	self.update = function() {
-		self.coord_display_x.nodeValue = Math.floor(thisPlayer.position.x);
-		self.coord_display_y.nodeValue = Math.floor(thisPlayer.position.y);
-	}
-
 	self.addActionListeners = function() {
 		canvas.addEventListener("click", self.onMoveAction, false);
 		ship_builder_button.addEventListener("click", self.onPressShipBuilderAction, false);
+	}
+
+	self.update = function() {
+		self.coord_display_x.nodeValue = Math.floor(thisPlayer.ship.pos.x);
+		self.coord_display_y.nodeValue = Math.floor(thisPlayer.ship.pos.y);
 	}
 
 	//Actions
 	self.onMoveAction = function(event) {
 		var x = (event.pageX - canvas.width / 2) + camera.x;
 		var y = ((event.pageY - canvas.height / 2) * -1) + camera.y;
-		server.sendPlayerAction("shipMoveRequest", {id: thisPlayerId, x: x, y: y});
+		server.sendPlayerAction("shipMoveRequest", {id: thisPlayer.id, x: x, y: y});
 	}
 
 	self.onPressShipBuilderAction = function(event) {
@@ -125,7 +149,7 @@ var Graphics = function(canvas) {
 	}
 
 	self.init = function() {
-		self.gl = canvas.getContext("webgl", { antialias: true });
+		self.gl = self.canvas.getContext("webgl", { antialias: true });
 		var gl = self.gl;
 
 		var vertexShaderSource = document.getElementById("2d-vertex-shader").text;
@@ -219,12 +243,6 @@ var Graphics = function(canvas) {
 	}
 
 	self.render = function() {
-		//Update camera position
-		if(camera.followPlayer) {
-	    	camera.x = thisPlayer.position.x;
-	    	camera.y = thisPlayer.position.y;
-	    }
-
 		var gl = self.gl;
 		self.resize(gl);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -242,10 +260,9 @@ var Graphics = function(canvas) {
 
 	self.renderAllShips = function() {
 		var gl = self.gl;
-		
+
 	    self.renderShip(
-    		thisPlayer.position.x, 
-			thisPlayer.position.y,
+    		{x: thisPlayer.ship.pos.x, y: thisPlayer.ship.pos.y},
 			{x:10, y:10}, 
 			{r:1, g:0, b:0},
 		);
@@ -253,8 +270,7 @@ var Graphics = function(canvas) {
 	    for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
 	    	self.renderShip(
-	    		player.position.x, 
-				player.position.y,
+	    		{x: player.ship.pos.x, y: player.ship.pos.y},
 				{x:10, y:10}, 
 				{r:1, g:0, b:0},
 			);
@@ -265,30 +281,30 @@ var Graphics = function(canvas) {
 		var gl = self.gl;
 
 		//Draw destination
-		if(thisPlayer.isMoving) {
+		if(thisPlayer.ship.isMoving) {
 			//Render line
 			self.renderLine(
-				{x: thisPlayer.position.x, y: thisPlayer.position.y},
-				{x: thisPlayer.destPosition.x, y: thisPlayer.destPosition.y},
+				{x: thisPlayer.ship.pos.x, y: thisPlayer.ship.pos.y},
+				{x: thisPlayer.ship.destPos.x, y: thisPlayer.ship.destPos.y},
 				{r:0, g:0.3, b:0}
 			);
 			
-			self.renderSquare(thisPlayer.destPosition.x, 
-				thisPlayer.destPosition.y,
+			self.renderSquare(
+				{x: thisPlayer.ship.destPos.x, y: thisPlayer.ship.destPos.y},
 				{x:5, y:5}, 
 				{r:0, g:1, b:0},
 			);
 		}
 	}
 
-	self.renderShip = function(x, y, scaling, color) {
+	self.renderShip = function(pos, scaling, color) {
 		var gl = self.gl;
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, graphics.square_gl_buffer);
 	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-		var translationMatrix = self.translation(x - camera.x + graphics.gl.canvas.width / 2, 
-			y - camera.y + graphics.gl.canvas.height / 2);
+		var translationMatrix = self.translation(pos.x - camera.x + graphics.gl.canvas.width / 2, 
+			pos.y - camera.y + graphics.gl.canvas.height / 2);
 
 		var rotationMatrix = self.rotation(0);
 		var scalingMatrix = self.scaling(scaling.x, scaling.y)
@@ -301,14 +317,14 @@ var Graphics = function(canvas) {
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}
 
-	self.renderSquare = function(x, y, scaling, color) {
+	self.renderSquare = function(pos, scaling, color) {
 		var gl = self.gl;
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, graphics.square_gl_buffer);
 	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-		var translationMatrix = self.translation(x - camera.x + graphics.gl.canvas.width / 2, 
-			y - camera.y + graphics.gl.canvas.height / 2);
+		var translationMatrix = self.translation(pos.x - camera.x + graphics.gl.canvas.width / 2, 
+			pos.y - camera.y + graphics.gl.canvas.height / 2);
 
 		var rotationMatrix = self.rotation(0);
 		var scalingMatrix = self.scaling(scaling.x, scaling.y)
@@ -417,7 +433,6 @@ var Game = function() {
 	return self;
 }
 
-
 //Global variables
 var canvas = document.getElementById("canvas");
 
@@ -428,20 +443,32 @@ var graphics = Graphics(canvas);
 var game = Game();
 
 var PLAYER_LIST = {};
-var thisPlayer = Player(-1);
-var thisPlayerId = 0;
+var thisPlayer = {};
 
 function main() {
 
 	//Start listening on server
 	server.connect();
+
+	//Initialize graphics
 	graphics.init();
 
+	//Setup gui
 	gui.createGui();
 	gui.addActionListeners();
 
-	setInterval(graphics.render, 1000/25);
-	setInterval(gui.update, 1000/25);
+	//Start game
+	setInterval(logic, 1000/25);
+	setInterval(render, 1000/25);
+}
+
+function logic() {
+	gui.update();
+	camera.update();
+}
+
+function render() {
+	graphics.render();
 }
 
 main();
