@@ -131,6 +131,7 @@ var Gui = function() {
 	}
 
 	self.onPressShipBuilderAction = function(event) {
+		/*
 		if(self.display_ship_builder) {
 			ship_builder_button.style.border = "thin solid #000000";
 			self.display_ship_builder = false;
@@ -138,6 +139,7 @@ var Gui = function() {
 			ship_builder_button.style.border = "thin solid #00FF00";
 			self.display_ship_builder = true;
 		}
+		*/
 	}
 
 	self.onPressShipStatisticsAction = function(event) {
