@@ -37,7 +37,7 @@ var Player = function(id, socket) {
 			var diffX = self.ship.destPos.x - self.ship.pos.x;
 			var diffY = self.ship.destPos.y - self.ship.pos.y;
 			var distance = Math.sqrt(diffX * diffX + diffY * diffY);
-			if(distance <= self.speed) {
+			if(distance <= 2) { //fix bug
 				self.ship.pos.x = self.ship.destPos.x;
 				self.ship.pos.y = self.ship.destPos.y;
 				self.ship.isMoving = false;
@@ -52,7 +52,6 @@ var Player = function(id, socket) {
 		return {id: self.id, ship: self.ship.toString()};
 	}
 
-	PLAYER_LIST[id] = self;
 	return self;
 }
 
@@ -84,17 +83,34 @@ function main() {
 }
 
 function clientCommunication() {
-	var posPackage = [];
-
-	for(var i in PLAYER_LIST) {
-		var player = PLAYER_LIST[i];
-		posPackage.push(player.toString());
-	}
+	var playerUpdatePackage = createPlayerUpdatePackage();
 
 	for(var i in PLAYER_LIST) {
 		var socket = PLAYER_LIST[i].socket;
-		socket.emit('playerPositions', posPackage);
+		socket.emit('serverUpdate', {playerUpdate: playerUpdatePackage});
 	}
+}
+
+function createPlayerUpdatePackage() {
+	var playerUpdatePackage = [];
+
+	for(var i in PLAYER_LIST) {
+		var player = PLAYER_LIST[i];
+		playerUpdatePackage.push(player.toString());
+	}
+
+	return playerUpdatePackage;
+}
+
+function createPlayerInitialLoadPackage() {
+	var playerInitialLoadPackage = [];
+
+	for(var i in PLAYER_LIST) {
+		var player = PLAYER_LIST[i];
+		playerInitialLoadPackage.push(player.toString());
+	}
+
+	return playerInitialLoadPackage;
 }
 
 function update() {
@@ -108,7 +124,22 @@ function OnPlayerConnect(socket) {
 	console.log("Player connected");
 	var player = Player(Math.random(), socket);
 
-	socket.emit('playerId', { id: player.id});
+	/* Send load data about all players
+	 * and info about the new player
+	 */
+	var playerInitialLoadPackage = createPlayerInitialLoadPackage();
+	var newPlayerLoadPackage = player.toString();
+	socket.emit('initialLoad', {player: newPlayerLoadPackage, playerLoad: playerInitialLoadPackage});
+	
+
+	/* Send load data about new player to all other players
+	 */
+	for(var i in PLAYER_LIST) {
+		PLAYER_LIST[i].socket.emit('playerConnect', {player: newPlayerLoadPackage});
+	}
+
+	//Add new player to the list of players
+	PLAYER_LIST[player.id] = player;
 
 	socket.on('disconnect', function() {
 		OnPlayerDisconnect(player);
@@ -128,7 +159,16 @@ function OnPlayerConnect(socket) {
 
 function OnPlayerDisconnect(player) {
 	console.log("Player disconnect");
-	delete PLAYER_LIST[player.id];
+	var playerId = player.id;
+	delete PLAYER_LIST[playerId];
+	sendDisconnectMessage(playerId);
+}
+
+function sendDisconnectMessage(id) {
+	for(var i in PLAYER_LIST) {
+		var socket = PLAYER_LIST[i].socket;
+		socket.emit('playerDisconnect', {id: id});
+	}
 }
 
 main();

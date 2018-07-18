@@ -5,14 +5,21 @@ var Ship = function() {
 		pos: {x: 0, y: 0},
 		destPos: {x: 0, y: 0},
 		isMoving: false,
-		speed: 0,
+		speed: 1,
 	}
 
-	self.updateState = function(data) {
-		self.pos = data.pos;
-		self.destPos = data.destPos;
-		self.isMoving = data.isMoving;
-		self.speed = data.speed;
+	self.updateState = function(shipData) {
+		self.pos = shipData.pos;
+		self.destPos = shipData.destPos;
+		self.isMoving = shipData.isMoving;
+		self.speed = shipData.speed;
+	}
+
+	self.loadShip = function(shipData) {
+		self.pos = shipData.pos;
+		self.destPos = shipData.destPos;
+		self.isMoving = shipData.isMoving;
+		self.speed = shipData.speed;
 	}
 
 	return self;
@@ -25,9 +32,14 @@ var Player = function(id) {
 	}
 
 	self.ship = Ship();
+	
+	self.updateState = function(playerData) {
+		self.ship.updateState(playerData.ship);
+	}
 
-	self.updateState = function(data) {
-		self.ship.updateState(data.ship);
+	self.loadPlayer = function(playerData) {
+		self.id = playerData.id;
+		self.ship = Ship(playerData.ship);
 	}
 
 	return self;
@@ -41,24 +53,36 @@ var Server = function() {
 	self.socket = io();
 
 	self.connect = function() {
-		self.socket.on('playerId', function(data) {
-			thisPlayer = Player(data.id);
+		self.socket.on('initialLoad', function(data) {
+			thisPlayer = Player(data.player.id);
+			thisPlayer.loadPlayer(data.player);
+			PLAYER_LIST[thisPlayer.id] = thisPlayer;
+
+			var playerLoad = data.playerLoad;
+			for(var i = 0; i < playerLoad.length; i++) {
+				var player = Player(playerLoad[i].id);
+				player.loadPlayer(playerLoad[i]);
+				PLAYER_LIST[player.id] = player;
+			}
+			
 			self.startListen();
 		});
 	}
 
 	self.startListen = function() {
-		self.socket.on('playerPositions', function(data) {
-			for(var i = 0; i < data.length; i++) {
-				var playerId = data[i].id;
-				if(playerId == thisPlayer.id) {
-					thisPlayer.updateState(data[i]);
-				} else {
-					//TODO fix so we dont remove all players
-					PLAYER_LIST = {};
-					var player = Player(playerId);
-					player.updateState(data[i]);
-					PLAYER_LIST[player.id] = player;
+		self.socket.on('playerDisconnect', function(data) {
+			delete PLAYER_LIST[data.id];
+		});
+
+		self.socket.on('playerConnect', function(data) {
+			PLAYER_LIST[data.player.id] = Player(data.player);
+		});
+
+		self.socket.on('serverUpdate', function(data) {
+			var playerUpdate = data.playerUpdate;
+			for(var i = 0; i < playerUpdate.length; i++) {
+				if(PLAYER_LIST[playerUpdate[i].id] != undefined) {
+					PLAYER_LIST[playerUpdate[i].id].updateState(playerUpdate[i]);
 				}
 			}
 		});
@@ -119,8 +143,10 @@ var Gui = function() {
 	}
 
 	self.update = function() {
-		self.coord_display_x.nodeValue = Math.floor(thisPlayer.ship.pos.x);
-		self.coord_display_y.nodeValue = Math.floor(thisPlayer.ship.pos.y);
+		if(thisPlayer != undefined) {
+			self.coord_display_x.nodeValue = Math.floor(thisPlayer.ship.pos.x);
+			self.coord_display_y.nodeValue = Math.floor(thisPlayer.ship.pos.y);
+		}
 	}
 
 	//Actions
@@ -450,7 +476,7 @@ var graphics = Graphics(canvas);
 var game = Game();
 
 var PLAYER_LIST = {};
-var thisPlayer = {};
+var thisPlayer = Player(-1);
 
 function main() {
 
