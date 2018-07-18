@@ -1,12 +1,27 @@
 
 //Ship class
-//Ship class
 var Ship = function() {
 	var self = {
 		pos: {x: 0, y: 0},
 		destPos: {x: 0, y: 0},
 		isMoving: false,
 		speed: 1,
+	}
+
+	self.update = function() {
+		if(self.isMoving) {
+			var diffX = self.destPos.x - self.pos.x;
+			var diffY = self.destPos.y - self.pos.y;
+			var distance = Math.sqrt(diffX * diffX + diffY * diffY);
+			if(distance <= 2) { //fix bug
+				self.pos.x = self.destPos.x;
+				self.pos.y = self.destPos.y;
+				self.isMoving = false;
+			} else {
+				self.pos.x += (diffX / distance) * self.speed;
+				self.pos.y += (diffY / distance) * self.speed;
+			}
+		}
 	}
 
 	self.toString = function() {
@@ -33,19 +48,7 @@ var Player = function(id, socket) {
 	self.ship = Ship();
 
 	self.update = function() {
-		if(self.ship.isMoving) {
-			var diffX = self.ship.destPos.x - self.ship.pos.x;
-			var diffY = self.ship.destPos.y - self.ship.pos.y;
-			var distance = Math.sqrt(diffX * diffX + diffY * diffY);
-			if(distance <= 2) { //fix bug
-				self.ship.pos.x = self.ship.destPos.x;
-				self.ship.pos.y = self.ship.destPos.y;
-				self.ship.isMoving = false;
-			} else {
-				self.ship.pos.x += (diffX / distance) * self.ship.speed;
-				self.ship.pos.y += (diffY / distance) * self.ship.speed;
-			}
-		}
+		self.ship.update();
 	}
 
 	self.toString = function() {
@@ -55,119 +58,120 @@ var Player = function(id, socket) {
 	return self;
 }
 
+var NetworkCommunication = function() {
+	var self = {
+
+	}
+
+	self.createPlayerUpdatePackage = function() {
+		var playerUpdatePackage = [];
+
+		for(var i in PLAYER_LIST) {
+			var player = PLAYER_LIST[i];
+			playerUpdatePackage.push(player.toString());
+		}
+
+		return playerUpdatePackage;
+	}
+
+	self.createPlayerInitialLoadPackage = function() {
+		var playerInitialLoadPackage = [];
+
+		for(var i in PLAYER_LIST) {
+			var player = PLAYER_LIST[i];
+			playerInitialLoadPackage.push(player.toString());
+		}
+
+		return playerInitialLoadPackage;
+	}
+
+	self.updateClients = function() {
+		var playerUpdatePackage = self.createPlayerUpdatePackage();
+
+		for(var i in PLAYER_LIST) {
+			var socket = PLAYER_LIST[i].socket;
+			socket.emit('playerUpdate', {playerUpdate: playerUpdatePackage});
+		}
+	}
+
+	//EVENTS
+
+	self.OnPlayerConnect = function(socket) {
+		console.log("Player connected");
+		var player = Player(Math.random(), socket);
+
+		/* Send load data about all players
+		 * and info about the new player
+		 */
+		var playerInitialLoadPackage = self.createPlayerInitialLoadPackage();
+		var newPlayerLoadPackage = player.toString();
+		socket.emit('initialLoad', {player: newPlayerLoadPackage, playerLoad: playerInitialLoadPackage});
+		
+
+		/* Send load data about new player to all other players
+		 */
+		for(var i in PLAYER_LIST) {
+			PLAYER_LIST[i].socket.emit('playerConnect', {player: newPlayerLoadPackage});
+		}
+
+		//Add new player to the list of players
+		PLAYER_LIST[player.id] = player;
+
+
+		socket.on('disconnect', function() {
+			console.log("Player disconnect");
+			var playerId = player.id;
+			delete PLAYER_LIST[playerId];
+			for(var i in PLAYER_LIST) {
+				var socket = PLAYER_LIST[i].socket;
+				socket.emit('playerDisconnect', {id: playerId});
+			}
+		});
+
+		socket.on('shipMoveRequest', function(data) {
+			var player = PLAYER_LIST[data.id];
+			if(player) {
+				if(data.x != player.ship.pos.x || data.y != player.ship.pos.y) {
+					player.ship.isMoving = true;
+					player.ship.destPos.x = data.x;
+					player.ship.destPos.y = data.y;
+				}
+			}
+		});
+	}
+	//EVENTS END
+
+	self.startListenOnClients = function(serv) {
+		self.io = require('socket.io') (serv, {});
+		self.io.sockets.on('connection', self.OnPlayerConnect);
+	}
+
+	return self;
+}
 
 function main() {
-	/* Setup express and file communication */
 	var express = require('express');
 	var app = express();
 	var serv = require('http').Server(app);
-
 	app.get('/', function(req, res) {
 		res.sendFile(__dirname + '/client/index.html');
 	});
-
-	//This will make client able to request any file in client folder.
 	app.use('/client', express.static(__dirname + '/client'));
-
 	serv.listen(2000);
-
 	console.log("Server started.");
 
-	var io = require('socket.io') (serv, {});
+	var networkCommunication = NetworkCommunication();
+	networkCommunication.startListenOnClients(serv);
 
-	io.sockets.on('connection', OnPlayerConnect);
 
 	/* INTERVAL FUNCTIONS */
-	setInterval(clientCommunication, 1000/25);
+	setInterval(networkCommunication.updateClients, 1000/25);
 	setInterval(update, 1000/25);
-}
-
-function clientCommunication() {
-	var playerUpdatePackage = createPlayerUpdatePackage();
-
-	for(var i in PLAYER_LIST) {
-		var socket = PLAYER_LIST[i].socket;
-		socket.emit('serverUpdate', {playerUpdate: playerUpdatePackage});
-	}
-}
-
-function createPlayerUpdatePackage() {
-	var playerUpdatePackage = [];
-
-	for(var i in PLAYER_LIST) {
-		var player = PLAYER_LIST[i];
-		playerUpdatePackage.push(player.toString());
-	}
-
-	return playerUpdatePackage;
-}
-
-function createPlayerInitialLoadPackage() {
-	var playerInitialLoadPackage = [];
-
-	for(var i in PLAYER_LIST) {
-		var player = PLAYER_LIST[i];
-		playerInitialLoadPackage.push(player.toString());
-	}
-
-	return playerInitialLoadPackage;
 }
 
 function update() {
 	for(var i in PLAYER_LIST) {
 		PLAYER_LIST[i].update();
-	}
-}
-
-/* EVENTS */
-function OnPlayerConnect(socket) {
-	console.log("Player connected");
-	var player = Player(Math.random(), socket);
-
-	/* Send load data about all players
-	 * and info about the new player
-	 */
-	var playerInitialLoadPackage = createPlayerInitialLoadPackage();
-	var newPlayerLoadPackage = player.toString();
-	socket.emit('initialLoad', {player: newPlayerLoadPackage, playerLoad: playerInitialLoadPackage});
-	
-
-	/* Send load data about new player to all other players
-	 */
-	for(var i in PLAYER_LIST) {
-		PLAYER_LIST[i].socket.emit('playerConnect', {player: newPlayerLoadPackage});
-	}
-
-	//Add new player to the list of players
-	PLAYER_LIST[player.id] = player;
-
-	socket.on('disconnect', function() {
-		OnPlayerDisconnect(player);
-	});
-
-	socket.on('shipMoveRequest', function(data) {
-		var player = PLAYER_LIST[data.id];
-		if(player) {
-			if(data.x != player.ship.pos.x || data.y != player.ship.pos.y) {
-				player.ship.isMoving = true;
-				player.ship.destPos.x = data.x;
-				player.ship.destPos.y = data.y;
-			}
-		}
-	});
-}
-
-function OnPlayerDisconnect(player) {
-	console.log("Player disconnect");
-	var playerId = player.id;
-	delete PLAYER_LIST[playerId];
-	sendDisconnectMessage(playerId);
-}
-
-function sendDisconnectMessage(id) {
-	for(var i in PLAYER_LIST) {
-		var socket = PLAYER_LIST[i].socket;
-		socket.emit('playerDisconnect', {id: id});
 	}
 }
 

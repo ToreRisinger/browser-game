@@ -8,7 +8,7 @@ var Ship = function() {
 		speed: 1,
 	}
 
-	self.updateState = function(shipData) {
+	self.updateShip = function(shipData) {
 		self.pos = shipData.pos;
 		self.destPos = shipData.destPos;
 		self.isMoving = shipData.isMoving;
@@ -33,8 +33,8 @@ var Player = function(id) {
 
 	self.ship = Ship();
 	
-	self.updateState = function(playerData) {
-		self.ship.updateState(playerData.ship);
+	self.updatePlayer = function(playerData) {
+		self.ship.updateShip(playerData.ship);
 	}
 
 	self.loadPlayer = function(playerData) {
@@ -51,6 +51,26 @@ var Server = function() {
 		
 	}
 	self.socket = io();
+
+	//EVENTS
+	self.OnPlayerDisconnect = function(data) {
+		delete PLAYER_LIST[data.id];
+	}
+
+	self.OnPlayerConnect = function(data) {
+		var newPlayer = Player(data.player.id);
+		newPlayer.updatePlayer(data.player);
+		PLAYER_LIST[data.player.id] = newPlayer;
+	}
+
+	self.OnPlayerUpdate = function(data) {
+		var playerUpdate = data.playerUpdate;
+		for(var i = 0; i < playerUpdate.length; i++) {
+			if(PLAYER_LIST[playerUpdate[i].id] != undefined) {
+				PLAYER_LIST[playerUpdate[i].id].updatePlayer(playerUpdate[i]);
+			}
+		}
+	}
 
 	self.connect = function() {
 		self.socket.on('initialLoad', function(data) {
@@ -70,24 +90,12 @@ var Server = function() {
 	}
 
 	self.startListen = function() {
-		self.socket.on('playerDisconnect', function(data) {
-			delete PLAYER_LIST[data.id];
-		});
-
-		self.socket.on('playerConnect', function(data) {
-			PLAYER_LIST[data.player.id] = Player(data.player);
-		});
-
-		self.socket.on('serverUpdate', function(data) {
-			var playerUpdate = data.playerUpdate;
-			for(var i = 0; i < playerUpdate.length; i++) {
-				if(PLAYER_LIST[playerUpdate[i].id] != undefined) {
-					PLAYER_LIST[playerUpdate[i].id].updateState(playerUpdate[i]);
-				}
-			}
-		});
+		self.socket.on('playerDisconnect', self.OnPlayerDisconnect);
+		self.socket.on('playerConnect', self.OnPlayerConnect);
+		self.socket.on('playerUpdate', self.OnPlayerUpdate);
 	}
 
+	
 	self.sendPlayerAction = function(actionName, data) {
 		self.socket.emit(actionName, data);
 	};
@@ -157,15 +165,7 @@ var Gui = function() {
 	}
 
 	self.onPressShipBuilderAction = function(event) {
-		/*
-		if(self.display_ship_builder) {
-			ship_builder_button.style.border = "thin solid #000000";
-			self.display_ship_builder = false;
-		} else {
-			ship_builder_button.style.border = "thin solid #00FF00";
-			self.display_ship_builder = true;
-		}
-		*/
+		//TODO
 	}
 
 	self.onPressShipStatisticsAction = function(event) {
@@ -491,11 +491,11 @@ function main() {
 	gui.addActionListeners();
 
 	//Start game
-	setInterval(logic, 1000/25);
+	setInterval(update, 1000/25);
 	setInterval(render, 1000/25);
 }
 
-function logic() {
+function update() {
 	gui.update();
 	camera.update();
 }
