@@ -1,3 +1,11 @@
+var ship_base_types = {
+	pod: {size: {x:3, y:3}, module_placement: [4]},
+	scout_class_1: {size: {x:3, y:3}, module_slots : [1, 4, 7]},
+	scout_class_2: {size: {x:3, y:3}, module_slots : [1, 3, 4, 5, 7]},
+	scout_class_3: {size: {x:3, y:3}, module_slots : [1, 3, 4, 5, 6, 7, 8]},
+	scout_class_4: {size: {x:3, y:3}, module_slots : [0, 1, 2, 3, 4, 5, 6, 7, 8]},
+}
+
 
 //Ship class
 var Ship = function() {
