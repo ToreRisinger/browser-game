@@ -15,11 +15,27 @@ var Ship = function() {
 		self.speed = shipData.speed;
 	}
 
+	self.getNrOfModules = function(modules) {
+		var count = 0;
+		for(x = 0; x < modules.length; x++) {
+			for(y = 0; y < modules[x].length; y++) {
+				if(modules[x][y] == 1) {
+					count++;
+				}
+			}
+		}
+		return count;
+	}
+
 	self.loadShip = function(shipData) {
 		self.pos = shipData.pos;
 		self.destPos = shipData.destPos;
 		self.isMoving = shipData.isMoving;
 		self.speed = shipData.speed;
+		self.mainModule = shipData.mainModule;
+		self.modules = shipData.modules;
+		self.nrOfModules = self.getNrOfModules(self.modules);
+		self.graphics_buffer = graphics.createAndGetBuffer(self);
 	}
 
 	return self;
@@ -39,7 +55,7 @@ var Player = function(id) {
 
 	self.loadPlayer = function(playerData) {
 		self.id = playerData.id;
-		self.ship = Ship(playerData.ship);
+		self.ship.loadShip(playerData.ship);
 	}
 
 	return self;
@@ -59,7 +75,7 @@ var Server = function() {
 
 	self.OnPlayerConnect = function(data) {
 		var newPlayer = Player(data.player.id);
-		newPlayer.updatePlayer(data.player);
+		newPlayer.loadPlayer(data.player);
 		PLAYER_LIST[data.player.id] = newPlayer;
 	}
 
@@ -295,7 +311,7 @@ var Graphics = function(canvas) {
 		var gl = self.gl;
 
 	    self.renderShip(
-    		{x: thisPlayer.ship.pos.x, y: thisPlayer.ship.pos.y},
+    		thisPlayer.ship,
 			{x:10, y:10}, 
 			{r:1, g:0, b:0},
 		);
@@ -303,7 +319,7 @@ var Graphics = function(canvas) {
 	    for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
 	    	self.renderShip(
-	    		{x: player.ship.pos.x, y: player.ship.pos.y},
+	    		player.ship,
 				{x:10, y:10}, 
 				{r:1, g:0, b:0},
 			);
@@ -330,24 +346,27 @@ var Graphics = function(canvas) {
 		}
 	}
 
-	self.renderShip = function(pos, scaling, color) {
+	self.renderShip = function(ship, scaling, color) {
 		var gl = self.gl;
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, graphics.square_gl_buffer);
-	    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+		if(ship.graphics_buffer != undefined) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, ship.graphics_buffer);
+		    gl.vertexAttribPointer(graphics.vertexAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-		var translationMatrix = self.translation(pos.x - camera.x + graphics.gl.canvas.width / 2, 
-			pos.y - camera.y + graphics.gl.canvas.height / 2);
+			var translationMatrix = self.translation(ship.pos.x - camera.x + graphics.gl.canvas.width / 2, 
+				ship.pos.y - camera.y + graphics.gl.canvas.height / 2);
 
-		var rotationMatrix = self.rotation(0);
-		var scalingMatrix = self.scaling(scaling.x, scaling.y)
+			var rotationMatrix = self.rotation(0);
+			var scalingMatrix = self.scaling(scaling.x, scaling.y)
 
-		gl.uniformMatrix3fv(graphics.translationUniformLocation, false, translationMatrix);
-		gl.uniformMatrix3fv(graphics.rotationUniformLocation, false, rotationMatrix);
-		gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
-		gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
+			gl.uniformMatrix3fv(graphics.translationUniformLocation, false, translationMatrix);
+			gl.uniformMatrix3fv(graphics.rotationUniformLocation, false, rotationMatrix);
+			gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
+			gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
 
-		gl.drawArrays(gl.TRIANGLES, 0, 6);
+			console.log(ship.nrOfModules);
+			gl.drawArrays(gl.TRIANGLES, 0, ship.nrOfModules*6);
+		}	
 	}
 
 	self.renderSquare = function(pos, scaling, color) {
@@ -394,6 +413,40 @@ var Graphics = function(canvas) {
 		gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
 
 		gl.drawArrays(gl.LINES, 0, 2);
+	}
+
+	self.createAndGetBuffer = function(ship) {
+		var gl = self.gl;
+		var buffer = gl.createBuffer();
+
+		var square_vertices = [
+			0.5, -0.5,
+			0.5, 0.5,
+			-0.5, 0.5,
+			0.5, -0.5,
+			-0.5, 0.5,
+			-0.5, -0.5,
+		];
+
+		var mainModule_x = ship.mainModule.pos.x;
+		var mainModule_y = ship.mainModule.pos.y;
+
+		var ship_vertices = [];
+		for(x = 0; x < ship.modules.length; x++) {
+			for(y = 0; y < ship.modules[x].length; y++) {
+				for(i = 0; i < 6; i++) {
+					if(ship.modules[x][y] == 1) {
+						ship_vertices.push(square_vertices[i*2] + x - mainModule_x);
+						ship_vertices.push(square_vertices[(i*2) + 1] + y - mainModule_y);
+					}
+				}
+			}
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ship_vertices), gl.STATIC_DRAW);
+
+		return buffer;
 	}
 
 	self.translation = function(tx, ty) {

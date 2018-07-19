@@ -6,7 +6,16 @@ var Ship = function() {
 		destPos: {x: 0, y: 0},
 		isMoving: false,
 		speed: 1,
+		mainModule: {pos: {x: 0, y: 0}},
 	}
+
+	self.modules = [];
+	self.modules[0] = [];
+	self.modules[1] = [];
+	self.modules[0][0] = 1;
+	self.modules[0][1] = 1;
+	self.modules[1][0] = 1;
+	self.modules[1][1] = 0;
 
 	self.update = function() {
 		if(self.isMoving) {
@@ -24,12 +33,22 @@ var Ship = function() {
 		}
 	}
 
-	self.toString = function() {
+	self.createInitialLoadString = function() {
 		return {
 			pos: {x: self.pos.x, y: self.pos.y},
 			destPos: {x: self.destPos.x, y: self.destPos.y},
 			isMoving: self.isMoving,
 			speed: self.speed,
+			mainModule: self.mainModule,
+			modules: self.modules,
+		};
+	}
+
+	self.createUpdateString = function() {
+		return {
+			pos: {x: self.pos.x, y: self.pos.y},
+			destPos: {x: self.destPos.x, y: self.destPos.y},
+			isMoving: self.isMoving,
 		};
 	}
 
@@ -51,8 +70,12 @@ var Player = function(id, socket) {
 		self.ship.update();
 	}
 
-	self.toString = function() {
-		return {id: self.id, ship: self.ship.toString()};
+	self.createInitialLoadString = function() {
+		return {id: self.id, ship: self.ship.createInitialLoadString()};
+	}
+
+	self.createUpdateString = function() {
+		return {id: self.id, ship: self.ship.createUpdateString()};
 	}
 
 	return self;
@@ -68,7 +91,7 @@ var NetworkCommunication = function() {
 
 		for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
-			playerUpdatePackage.push(player.toString());
+			playerUpdatePackage.push(player.createUpdateString());
 		}
 
 		return playerUpdatePackage;
@@ -79,7 +102,7 @@ var NetworkCommunication = function() {
 
 		for(var i in PLAYER_LIST) {
 			var player = PLAYER_LIST[i];
-			playerInitialLoadPackage.push(player.toString());
+			playerInitialLoadPackage.push(player.createInitialLoadString());
 		}
 
 		return playerInitialLoadPackage;
@@ -104,7 +127,7 @@ var NetworkCommunication = function() {
 		 * and info about the new player
 		 */
 		var playerInitialLoadPackage = self.createPlayerInitialLoadPackage();
-		var newPlayerLoadPackage = player.toString();
+		var newPlayerLoadPackage = player.createInitialLoadString();
 		socket.emit('initialLoad', {player: newPlayerLoadPackage, playerLoad: playerInitialLoadPackage});
 		
 
