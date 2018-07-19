@@ -14,16 +14,9 @@ var Ship = function() {
 		destPos: {x: 0, y: 0},
 		isMoving: false,
 		speed: 1,
-		mainModule: {pos: {x: 0, y: 0}},
+		mainModule: {},
+		modules: [],
 	}
-
-	self.modules = [];
-	self.modules[0] = [];
-	self.modules[1] = [];
-	self.modules[0][0] = 1;
-	self.modules[0][1] = 1;
-	self.modules[1][0] = 1;
-	self.modules[1][1] = 0;
 
 	self.update = function() {
 		if(self.isMoving) {

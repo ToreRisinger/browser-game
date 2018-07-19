@@ -45,6 +45,17 @@ var Ship = function() {
 var Player = function(id) {
 	var self = {
 		id: id,
+		skills: {ship_command:  	{name: "Ship command", level: 1},
+				weapons:			{name: "Weapons", level: 2},
+				mining:				{name: "Mining", level: 3},
+				hull_structure: 	{name: "Hull structure", level: 4},
+				energy_shield: 		{name: "Energy shield", level: 5},
+				sensors:   			{name: "Sensors", level: 6},
+				engine: 			{name: "Engine", level: 7},
+				energy_grid: 		{name: "Energy grid", level: 8},
+				accuracy: 			{name: "Accuracy", level: 9},
+				astroids: 			{name: "Astroid", level: 10},
+		},
 	}
 
 	self.ship = Ship();
@@ -156,14 +167,42 @@ var Gui = function() {
 
 		self.coord_display_x = xNode;
 		self.coord_display_y = yNode;
-		self.ship_builder_button = document.getElementById("ship_builder_button");
-		self.ship_statistics_button = document.getElementById("ship_statistics_button");
+
+		//ship builder
+		self.ship_builder = {};
+		self.ship_builder.ship_builder_button = document.getElementById("ship_builder_button");
+		self.ship_builder.ship_builder_window = document.getElementById("ship_builder_window");
+		self.ship_builder.ship_builder_window_title = document.getElementById("ship_builder_window_title");
+		self.ship_builder.isOpen = false;
+
+		//Ship statistics
+		self.ship_statistics = {};
+		self.ship_statistics.ship_statistics_button = document.getElementById("ship_statistics_button");
+		self.ship_statistics.ship_statistics_window = document.getElementById("ship_statistics_window");
+		self.ship_statistics.ship_statistics_window_title = document.getElementById("ship_statistics_window_title");
+		self.ship_statistics.isOpen = false;
+		
+		//Map
+		self.map = {};
+		self.map.map_button = document.getElementById("map_button");
+		self.map.map_window = document.getElementById("map_window");
+		self.map.map_window_title = document.getElementById("map_window_title");
+		self.map.isOpen = false;
+
+		//Skills
+		self.skills = {};
+		self.skills.skills_button = document.getElementById("skills_button");
+		self.skills.skills_window = document.getElementById("skills_window");
+		self.skills.skills_window_title = document.getElementById("skills_window_title");
+		self.skills.isOpen = false;
 	}
 
 	self.addActionListeners = function() {
 		canvas.addEventListener("click", self.onMoveAction, false);
-		ship_builder_button.addEventListener("click", self.onPressShipBuilderAction, false);
-		ship_statistics_button.addEventListener("click", self.onPressShipStatisticsAction, false);
+		self.ship_builder.ship_builder_button.addEventListener("click", self.onPressShipBuilderButton, false);
+		self.ship_statistics.ship_statistics_button.addEventListener("click", self.onPressShipStatisticsButton, false);
+		self.map.map_button.addEventListener("click", self.onPressMapButton, false);
+		self.skills.skills_button.addEventListener("click", self.onPressSkillsButton, false);
 	}
 
 	self.update = function() {
@@ -173,6 +212,20 @@ var Gui = function() {
 		}
 	}
 
+	self.closeAllWindows = function() {
+		self.ship_builder.isOpen = false;
+		self.ship_builder.ship_builder_window.style.display = "none";
+
+		self.ship_statistics.isOpen = false;
+		self.ship_statistics.ship_statistics_window.style.display = "none";
+
+		self.map.isOpen = false;
+		self.map.map_window.style.display = "none";
+
+		self.skills.isOpen = false;
+		self.skills.skills_window.style.display = "none";
+	}
+
 	//Actions
 	self.onMoveAction = function(event) {
 		var x = (event.pageX - canvas.width / 2) + camera.x;
@@ -180,12 +233,48 @@ var Gui = function() {
 		server.sendPlayerAction("shipMoveRequest", {id: thisPlayer.id, x: x, y: y});
 	}
 
-	self.onPressShipBuilderAction = function(event) {
-		//TODO
+	self.onPressShipBuilderButton = function(event) {
+		if(self.ship_builder.isOpen) {
+			self.ship_builder.ship_builder_window.style.display = "none";
+			self.ship_builder.isOpen = false;
+		} else {
+			self.closeAllWindows();
+			self.ship_builder.ship_builder_window.style.display = "block";
+			self.ship_builder.isOpen = true;
+		}
 	}
 
-	self.onPressShipStatisticsAction = function(event) {
-		//TODO
+	self.onPressShipStatisticsButton = function(event) {
+		if(self.ship_statistics.isOpen) {
+			self.ship_statistics.ship_statistics_window.style.display = "none";
+			self.ship_statistics.isOpen = false;
+		} else {
+			self.closeAllWindows();
+			self.ship_statistics.ship_statistics_window.style.display = "block";
+			self.ship_statistics.isOpen = true;
+		}
+	}
+
+	self.onPressMapButton = function(event) {
+		if(self.map.isOpen) {
+			self.map.map_window.style.display = "none";
+			self.map.isOpen = false;
+		} else {
+			self.closeAllWindows();
+			self.map.map_window.style.display = "block";
+			self.map.isOpen = true;
+		}
+	}
+
+	self.onPressSkillsButton = function(event) {
+		if(self.skills.isOpen) {
+			self.skills.skills_window.style.display = "none";
+			self.skills.isOpen = false;
+		} else {
+			self.closeAllWindows();
+			self.skills.skills_window.style.display = "block";
+			self.skills.isOpen = true;
+		}
 	}
 
 	return self;
@@ -364,8 +453,7 @@ var Graphics = function(canvas) {
 			gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
 			gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
 
-			console.log(ship.nrOfModules);
-			gl.drawArrays(gl.TRIANGLES, 0, ship.nrOfModules*6);
+			gl.drawArrays(gl.TRIANGLES, 0, 6);
 		}	
 	}
 
@@ -428,10 +516,14 @@ var Graphics = function(canvas) {
 			-0.5, -0.5,
 		];
 
-		var mainModule_x = ship.mainModule.pos.x;
-		var mainModule_y = ship.mainModule.pos.y;
-
 		var ship_vertices = [];
+
+		//Add main module
+		for(i = 0; i < square_vertices.length; i++) {
+			ship_vertices.push(square_vertices[i]);
+		}
+
+		/*
 		for(x = 0; x < ship.modules.length; x++) {
 			for(y = 0; y < ship.modules[x].length; y++) {
 				for(i = 0; i < 6; i++) {
@@ -442,6 +534,7 @@ var Graphics = function(canvas) {
 				}
 			}
 		}
+		*/
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ship_vertices), gl.STATIC_DRAW);

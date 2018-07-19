@@ -9,13 +9,13 @@ canvas {
  height: 100vh;
 }
 
-.container {
+#container {
     position: relative;
 }
 
 #coord_display {
     position: absolute;
-    left: 10px;
+    right: 10px;
     bottom: 10px;
     background-color: rgba(180, 180, 256, 0.2);
     color: white;
@@ -59,14 +59,12 @@ canvas {
 /* Tooltip text */
 .left_menu_button .tooltip {
     visibility: hidden;
-    width: 120px;
+    white-space: nowrap;
     background-color: black;
     color: #fff;
     text-align: left;
-    padding: 5px 0;
+    padding: 5px 5px;
     border-radius: 6px;
- 
-    /* Position the tooltip text - see examples below! */
     position: absolute;
     z-index: 1;
     top: 10px;
@@ -76,9 +74,70 @@ canvas {
 /* Show the tooltip text when you mouse over the tooltip container */
 .left_menu_button:hover .tooltip {
     visibility: visible;
-  
 }
 
 .left_menu_button:hover {
     opacity: 1;
 }
+
+.gui_window {
+    position: absolute;
+    left: 70px;
+    top: 10px;
+    bottom: 10px;
+    background-color: rgba(36, 36, 51, 1);
+    color: white;
+    font-family: monospace;
+    width: 500px;
+    opacity: 0.6;
+    border: thin solid rgba(108, 108, 153, 1);
+    display: none;
+}
+
+.gui_window_title {
+    position: relative;
+    background-color: rgba(36, 36, 51, 1);
+    color: white;
+    font-family: monospace;
+    top: -1px;
+    left: -1px;
+    width: 100%;
+    padding: 5px 0px;
+    opacity: 1;
+    border: thin solid rgba(108, 108, 153, 1);
+    text-align: center;
+}
+
+#ship_builder_grid td {
+    border: 1px solid rgba(108, 108, 153, 1);
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    color: white;
+}
+
+#ship_builder_grid {
+    position: relative;
+    top: 50px;
+}
+
+#ship_builder_window_confirm_button {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 5px 5px;
+    text-align: center;
+    color: white;
+    background-color: rgba(36, 36, 51, 1);
+    border: 1px solid rgba(108, 108, 153, 1);
+}
+
+
+.unselectable {
+    khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+} 
