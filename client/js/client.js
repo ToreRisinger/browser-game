@@ -1,3 +1,15 @@
+var MAIN_MODULE_TYPES = {
+
+};
+
+var MODULE_TYPES = {
+	1: {name: "Cargo 1", cargo: 10, weight: 10, energy_need: 1},
+	2: {name: "Cargo 2", cargo: 20, weight: 20, energy_need: 2},
+	3: {name: "Cargo 3", cargo: 30, weight: 30, energy_need: 3},
+	4: {name: "Cargo 4", cargo: 40, weight: 40, energy_need: 4},
+	5: {name: "Cargo 5", cargo: 50, weight: 50, energy_need: 5},
+}
+
 
 //Ship class
 var Ship = function() {
@@ -16,7 +28,7 @@ var Ship = function() {
 	}
 
 	self.getNrOfModules = function(modules) {
-		var count = 0;
+		var count = 1; //main module TODO
 		for(x = 0; x < modules.length; x++) {
 			for(y = 0; y < modules[x].length; y++) {
 				if(modules[x][y] == 1) {
@@ -34,6 +46,12 @@ var Ship = function() {
 		self.speed = shipData.speed;
 		self.mainModule = shipData.mainModule;
 		self.modules = shipData.modules;
+		self.nrOfModules = 1; //self.getNrOfModules(self.modules);
+		self.graphics_buffer = graphics.createAndGetBuffer(self);
+	}
+
+	self.newShip = function(modules) {
+		self.modules = modules
 		self.nrOfModules = self.getNrOfModules(self.modules);
 		self.graphics_buffer = graphics.createAndGetBuffer(self);
 	}
@@ -174,6 +192,45 @@ var Gui = function() {
 		self.ship_builder.ship_builder_window = document.getElementById("ship_builder_window");
 		self.ship_builder.ship_builder_window_title = document.getElementById("ship_builder_window_title");
 		self.ship_builder.isOpen = false;
+		self.ship_builder.confirm_button = document.getElementById("ship_builder_window_confirm_button");
+
+		self.ship_builder.grid = document.getElementById("ship_builder_grid");
+		self.ship_builder.built_ship = new Array(5);
+		for(var x = 0; x < 5; x++) {
+			self.ship_builder.built_ship[x] = new Array(5);
+			for(var y = 0; y < 5; y++) {
+				self.ship_builder.built_ship[x][y] = 0;
+			}
+		}
+
+		self.ship_builder.built_ship[2][2] = 1; //main module
+		self.ship_builder.grid.rows[2].cells[2].style.backgroundColor = "white";
+
+		self.ship_builder.confirm_button.onclick = function() {
+			thisPlayer.ship.newShip(self.ship_builder.built_ship);
+		};
+
+	    if (self.ship_builder.grid != null) {
+	        for (var x = 0; x < self.ship_builder.grid.rows.length; x++) {
+	            for (var y = 0; y < self.ship_builder.grid.rows[x].cells.length; y++) {
+	            	//main module always selected
+	            	if(x != 2 || y != 2) {
+	            		self.ship_builder.grid.rows[y].cells[x].x = x;
+		            	self.ship_builder.grid.rows[y].cells[x].y = (y - 4)*-1;
+		            	self.ship_builder.grid.rows[y].cells[x].onclick = function() {
+		            		if(self.ship_builder.built_ship[this.x][this.y] == 0) {
+		            			self.ship_builder.built_ship[this.x][this.y] = 1;
+		            			this.style.backgroundColor = "white";
+		            		} else {
+		            			self.ship_builder.built_ship[this.x][this.y] = 0;
+		            			this.style.backgroundColor = "black";
+		            		}
+	            		};
+	            	}
+	            	
+	            }
+	        }
+	    }
 
 		//Ship statistics
 		self.ship_statistics = {};
@@ -453,7 +510,7 @@ var Graphics = function(canvas) {
 			gl.uniformMatrix3fv(graphics.scalingUniformLocation, false, scalingMatrix);
 			gl.uniform3f(graphics.colorUniformLocation, color.r, color.g, color.b);
 
-			gl.drawArrays(gl.TRIANGLES, 0, 6);
+			gl.drawArrays(gl.TRIANGLES, 0, ship.nrOfModules*6);
 		}	
 	}
 
@@ -523,7 +580,9 @@ var Graphics = function(canvas) {
 			ship_vertices.push(square_vertices[i]);
 		}
 
-		/*
+		var mainModule_x = 2;
+		var mainModule_y = 2;
+
 		for(x = 0; x < ship.modules.length; x++) {
 			for(y = 0; y < ship.modules[x].length; y++) {
 				for(i = 0; i < 6; i++) {
@@ -534,7 +593,6 @@ var Graphics = function(canvas) {
 				}
 			}
 		}
-		*/
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ship_vertices), gl.STATIC_DRAW);

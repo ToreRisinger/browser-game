@@ -114,6 +114,11 @@ canvas {
     height: 50px;
     text-align: center;
     color: white;
+    background-color: black;
+}
+
+#ship_builder_grid td:hover {
+    background-color: rgba(108, 108, 153, 1) !important;
 }
 
 #ship_builder_grid {
@@ -132,6 +137,9 @@ canvas {
     border: 1px solid rgba(108, 108, 153, 1);
 }
 
+#ship_builder_window_confirm_button:hover {
+    background-color: rgba(108, 108, 153, 1);
+}
 
 .unselectable {
     khtml-user-select: none;
